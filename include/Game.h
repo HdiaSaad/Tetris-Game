@@ -1,4 +1,4 @@
-﻿#ifndef GAME_H
+#ifndef GAME_H
 #define GAME_H
 
 #include <SFML/Graphics.hpp>
@@ -34,14 +34,15 @@ private:
     sf::Text mMenuText_Close;
 
     static const int GRID_WIDTH = 10;
-    static const int GRID_HEIGHT = 20;
+    static const int GRID_HEIGHT = 20; // Corrected: removed duplicate 'int'
     static const int CELL_SIZE = 25;
 
     std::vector<std::vector<int>> mGrid;
     std::unique_ptr<Tetromino> mCurrentTetromino; // New member
-
+    std::unique_ptr<Tetromino> mNextTetromino;    // New member for next Tetromino preview
     // Fall timer
     sf::Time mFallTime;
+
     sf::Time mTimeSinceLastFall;
 
     // Game stats
@@ -50,8 +51,13 @@ private:
     int mPreviousLevel; // To detect level changes for background transition
     int mLinesCleared;
     int mPointsToNextLevel; // New member for tracking level progression
+    int mLives; // New member for player lives
     sf::Text mScoreText;
     sf::Text mLevelText;
+    int mBestScore; // New member for best score
+    sf::Text mBestScoreText; // New member for best score display
+    void saveScores(); // New method for saving scores
+    void loadScores(); // New method for loading scores
 
     // Background color transition members
     sf::Color mCurrentBgColor;

@@ -54,12 +54,14 @@ void Tetromino::setShape(const std::vector<sf::Vector2i>& newShape) {
 }
 
 
-void Tetromino::draw(sf::RenderWindow& window, int cellSize) const {
+
+
+void Tetromino::draw(sf::RenderWindow& window, int cellSize, const sf::Vector2i& offset) const {
     sf::RectangleShape block(sf::Vector2f(cellSize, cellSize));
     block.setFillColor(mColor);
 
     for (const auto& p : mShape) {
-        block.setPosition(sf::Vector2f((mPosition.x + p.x) * cellSize, (mPosition.y + p.y) * cellSize));
+        block.setPosition(sf::Vector2f((mPosition.x + p.x + offset.x) * cellSize, (mPosition.y + p.y + offset.y) * cellSize));
         window.draw(block);
     }
 }

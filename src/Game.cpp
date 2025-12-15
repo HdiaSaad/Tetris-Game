@@ -1,3 +1,4 @@
+#include <fstream> 
 #include "Game.h"
 #include <iostream>
 #include <random> // For random number generation
@@ -29,7 +30,7 @@ sf::Font Game::loadFont(const std::string& fontPath) {
 }
 
 Game::Game() 
-    : mWindow(sf::VideoMode({400, 500}), "Tetris"), // New window size
+    : mWindow(sf::VideoMode({500, 500}), "Tetris"), // New window size (increased width)
       mState(MENU),
       mFont(loadFont("C:/Windows/Fonts/arial.ttf")),
       mMenuText_Start(mFont, "Start", 50),
@@ -42,27 +43,41 @@ Game::Game()
       mPreviousLevel(1), // Initialize mPreviousLevel to 1
       mLinesCleared(0),
       mPointsToNextLevel(100), // Initialize mPointsToNextLevel to 100 for the first level up
+      mLives(3),               // Initialize mLives to 3
       mScoreText(mFont), // Initialize mScoreText
       mLevelText(mFont),  // Initialize mLevelText
+      mBestScore(0), // Initialize mBestScore
+      mBestScoreText(mFont), // Initialize mBestScoreText
       mCurrentBgColor(sf::Color::Black), // Initial background color
       mTargetBgColor(sf::Color::Black),   // Target background color (initially black)
       mLevelTransitionDuration(sf::seconds(2.0f)) // 2-second transition
+
 {
-    mMenuText_Start.setPosition(sf::Vector2f(160, 200)); // Adjusted position
+    mMenuText_Start.setPosition(sf::Vector2f(200, 200)); // Adjusted position for wider window
     mMenuText_Start.setFillColor(sf::Color::White);
 
-    mMenuText_Close.setPosition(sf::Vector2f(160, 270)); // Adjusted position
+    mMenuText_Close.setPosition(sf::Vector2f(200, 270)); // Adjusted position for wider window
     mMenuText_Close.setFillColor(sf::Color::White);
 
     mScoreText.setFont(mFont);
     mScoreText.setCharacterSize(24);
     mScoreText.setFillColor(sf::Color::White);
-    mScoreText.setPosition(sf::Vector2f(GRID_WIDTH * CELL_SIZE + 20, 50)); // Adjusted position
+    mScoreText.setPosition(sf::Vector2f(GRID_WIDTH * CELL_SIZE + 50, 50)); // Adjusted position
 
     mLevelText.setFont(mFont);
     mLevelText.setCharacterSize(24);
     mLevelText.setFillColor(sf::Color::White);
-    mLevelText.setPosition(sf::Vector2f(GRID_WIDTH * CELL_SIZE + 20, 100)); // Adjusted position
+    mLevelText.setPosition(sf::Vector2f(GRID_WIDTH * CELL_SIZE + 50, 100)); // Adjusted position
+
+    mBestScoreText.setFont(mFont);
+    mBestScoreText.setCharacterSize(24);
+    mBestScoreText.setFillColor(sf::Color::Yellow); // Differentiate best score color
+    mBestScoreText.setPosition(sf::Vector2f(GRID_WIDTH * CELL_SIZE + 50, 200)); // Position below lives
+
+    loadScores(); // Load best score at startup
+
+
+
 }
 
 void Game::spawnTetromino() {
@@ -70,17 +85,32 @@ void Game::spawnTetromino() {
     static std::mt19937 gen(rd());
     static std::uniform_int_distribution<> distrib(0, Tetromino::SHAPES.size() - 1);
 
-    int type = distrib(gen);
-    int startX = GRID_WIDTH / 2 - 2; // Center the tetromino
-    int startY = 0; // Start at the top
+    // If mNextTetromino is not yet initialized (first call from constructor/restartGame),
+    // generate both current and next Tetrominoes.
+    if (!mNextTetromino) {
+        int typeCurrent = distrib(gen);
+        mCurrentTetromino = std::make_unique<Tetromino>(typeCurrent, GRID_WIDTH / 2 - 2, 0);
 
-    mCurrentTetromino = std::make_unique<Tetromino>(type, startX, startY);
+        int typeNext = distrib(gen);
+        mNextTetromino = std::make_unique<Tetromino>(typeNext, 0, 0); 
+    } else { // Subsequent calls, cycle the Tetrominoes
+        mCurrentTetromino = std::move(mNextTetromino); // mCurrentTetromino takes mNextTetromino
+        // Use move to set position, as setPosition was removed.
+        // It moves from (0,0) to (GRID_WIDTH / 2 - 2, 0)
+        mCurrentTetromino->move(GRID_WIDTH / 2 - 2, 0); 
+
+        // Generate new mNextTetromino for preview, position (0,0) for display offset
+        int typeNext = distrib(gen);
+        mNextTetromino = std::make_unique<Tetromino>(typeNext, 0, 0);
+    }
 }
 
 void Game::restartGame() {
     mGrid = std::vector<std::vector<int>>(GRID_HEIGHT, std::vector<int>(GRID_WIDTH, 0)); // Clear grid
     mScore = 0;
     mLevel = 1;
+    mPreviousLevel = 1; // Reset previous level for background transition
+    mLives = 3;         // Reset lives
     mLinesCleared = 0;
     mFallTime = sf::seconds(0.5f); // Reset fall speed
     mTimeSinceLastFall = sf::Time::Zero;
@@ -211,8 +241,18 @@ void Game::update(sf::Time deltaTime) {
 
             spawnTetromino();
             if (checkCollision(*mCurrentTetromino, 0, 0)) { // Check for game over
-                mState = GAME_OVER;
-                std::cout << "Game Over!" << std::endl;
+                mLives--; // Decrement a life
+                if (mLives > 0) {
+                    // Reset game state for next life (clear grid, reset score/level if desired, or just continue)
+                    mGrid = std::vector<std::vector<int>>(GRID_HEIGHT, std::vector<int>(GRID_WIDTH, 0)); // Clear grid
+                } else {
+                    if (mScore > mBestScore) {
+                        mBestScore = mScore;
+                        saveScores();
+                    }
+                    mState = GAME_OVER;
+                    std::cout << "Game Over!" << std::endl;
+                }
             }
         }
         mTimeSinceLastFall = sf::Time::Zero;
@@ -310,8 +350,29 @@ void Game::render() {
         if (mCurrentTetromino) {
             mCurrentTetromino->draw(mWindow, CELL_SIZE);
         }
+        mScoreText.setString("Score: " + std::to_string(mScore)); // Update score text
         mWindow.draw(mScoreText);
+        mLevelText.setString("Level: " + std::to_string(mLevel)); // Update level text
         mWindow.draw(mLevelText);
+        mBestScoreText.setString("Best: " + std::to_string(mBestScore)); // Update best score text
+        mWindow.draw(mBestScoreText);
+
+        sf::Text livesText(mFont, "Lives: " + std::to_string(mLives), 24);
+        livesText.setFillColor(sf::Color::White);
+        livesText.setPosition(sf::Vector2f(GRID_WIDTH * CELL_SIZE + 50, 150)); // Adjusted position below level
+        mWindow.draw(livesText);
+
+        // Draw next tetromino preview
+        if (mNextTetromino) {
+            sf::Text nextText(mFont, "NEXT:", 24);
+            nextText.setFillColor(sf::Color::White);
+            nextText.setPosition(sf::Vector2f(GRID_WIDTH * CELL_SIZE + 50, 250)); // Adjusted position (moved up)
+            mWindow.draw(nextText);
+
+            // Draw the next tetromino slightly to the right and down
+            // Adjust position for a smaller preview and centered appearance
+            mNextTetromino->draw(mWindow, CELL_SIZE, sf::Vector2i(GRID_WIDTH + 3, 12)); // Adjusted offset (moved up)
+        }
     } else if (mState == GAME_OVER) {
         sf::Text gameOverText(mFont, "Game Over!", 40); // Smaller font size
         gameOverText.setFillColor(sf::Color::Red);
@@ -321,11 +382,35 @@ void Game::render() {
         // Approx text height: 40px
         // Centered X: (window_width / 2) - (text_width / 2) = (400 / 2) - (360 / 2) = 200 - 180 = 20
         // Centered Y: (window_height / 2) - (text_height / 2) = (500 / 2) - (40 / 2) = 250 - 20 = 230
-        gameOverText.setPosition(sf::Vector2f(20.0f, 230.0f));
+        gameOverText.setPosition(sf::Vector2f(70.0f, 230.0f));
         mWindow.draw(gameOverText);
+        mScoreText.setString("Score: " + std::to_string(mScore)); // Update score text
         mWindow.draw(mScoreText); // Display final score
+        mLevelText.setString("Level: " + std::to_string(mLevel)); // Update level text
         mWindow.draw(mLevelText); // Display final level
+        mBestScoreText.setString("Best: " + std::to_string(mBestScore)); // Update best score text
+        mWindow.draw(mBestScoreText); // Display best score on game over screen
     }
     
     mWindow.display();
+}
+
+void Game::saveScores() {
+    std::ofstream outFile("best_score.txt");
+    if (outFile.is_open()) {
+        outFile << mBestScore;
+        outFile.close();
+    } else {
+        std::cerr << "Unable to open best_score.txt for writing." << std::endl;
+    }
+}
+
+void Game::loadScores() {
+    std::ifstream inFile("best_score.txt");
+    if (inFile.is_open()) {
+        inFile >> mBestScore;
+        inFile.close();
+    } else {
+        mBestScore = 0; // If file doesn't exist, best score is 0
+    }
 }

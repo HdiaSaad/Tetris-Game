@@ -12,7 +12,7 @@ public:
     void move(int dx, int dy);
     std::vector<sf::Vector2i> getRotatedShape() const; // Changed from rotate()
 
-    void draw(sf::RenderWindow& window, int cellSize) const;
+    void draw(sf::RenderWindow& window, int cellSize, const sf::Vector2i& offset = sf::Vector2i(0, 0)) const;
 
     sf::Vector2i getPosition() const;
     const std::vector<sf::Vector2i>& getShape() const;

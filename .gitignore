@@ -1,0 +1,57 @@
+# CMake build artifacts
+/build/
+*.cmake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+CTestTestfile.cmake
+# SFML related files (if any specific to build/install)
+# Visual Studio files
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.suo
+*.opensdf
+*.sdf
+*.user
+*.ipch
+*.aps
+*.ncb
+*.pdb
+*.obj
+*.o
+*.lib
+*.exp
+*.ilk
+*.idb
+*.opt
+*.res
+*.pch
+*.vcproj.*.user
+*.tlog
+*.lastbuildstate
+Debug/
+Release/
+# Executables and libraries
+*.exe
+*.dll
+*.so
+*.a
+# Dependency files
+*.d
+# MacOS files
+.DS_Store
+# Linux files
+# Thumbnails
+*.thumb
+# Misc
+*.log
+*.bak
+*.tmp
+*.swp
+# Gemini specific
+.gemini/
+.geminiignore

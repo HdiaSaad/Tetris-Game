@@ -13,6 +13,8 @@ This is a Tetris game developed in C++ using the SFML (Simple and Fast Multimedi
 *   **Responsive UI:** Adjusted grid size and UI element positioning for a better visual experience.
 *   **Main Menu:** "Start" and "Close" options.
 *   **Game Over Screen:** Displays "Game Over!" message, score, and level.
+*   **Best Score System:** Tracks and displays the highest score achieved, persisting across game sessions.
+*   **Next Tetromino Preview:** Shows the upcoming Tetromino, allowing players to strategize.
 
 ## Building and Running
 
